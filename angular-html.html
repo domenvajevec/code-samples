@@ -1,0 +1,227 @@
+<!-- MAIN CONTENT START -->
+<article class="wm-content page-asset">
+
+    <header class="header--assets" sticky>
+        <div class="filter-header"
+            ng-class="{'active': assetvm.isLeftSidebarOpen}"
+            ng-click="assetvm.toggleLeftSidebar()">
+            <span class="text"> <strong>FILTERS</strong>
+                ({{assetvm.numAppliedFilters || 0}}) active
+            </span>
+            <button title="Toggle Filters" class="toggle-btn">
+                <span></span> <em ng-if="assetvm.numAppliedFilters >0">{{assetvm.numAppliedFilters}}</em>
+            </button>
+        </div>
+        <div class="content-head">
+            <div class="search icon icon-search-find">
+                <form name="assetvm.forms.search">
+                    <input class="asset-input"
+                        type="text"
+                        placeholder="{{assetvm.searchQuery}}"
+                        ng-model="assetvm.searchQuery"
+                        ng-change="assetvm.callApi()"></form>
+            </div>
+
+            <div class="buckets">
+                <button class="action icon icon-bucket"
+                    title="view bucket"
+                    ui-sref="app.content.asset.bucket({bucketId: assetvm.dropdownSelectedBucket._id})">
+                    <em class="icon icon-eye"></em>
+                </button>
+                <select id="select-bucket"
+                    name="buckets"
+                    ng-model="assetvm.dropdownSelectedBucket"
+                    ng-options="bucket.name for bucket in assetvm.bucketList"
+                    ng-change="assetvm.bucketSelected(assetvm.dropdownSelectedBucket)">
+                    <option value="">Select Bucket</option>
+                </select>
+                <button title="quick add selected to bucket"
+                    class="action icon icon-bucket"
+                    ng-click="assetvm.quickAddToBucket()">
+                    <em class="icon icon-plus"></em>
+                </button>
+            </div>
+        </div>
+        <div class="head-sidebar-asset dark-side">
+            <button title="view selected"
+                class="action icon icon-filmstrip"
+                ui-sref="app.content.asset.selection">
+                <em>{{assetvm.selectedAssetCount}}</em>
+            </button>
+            <button title="clear selected"
+                class="action icon icon-filmstrip"
+                ng-click="assetvm.clearSelectedAssets()">
+                <em class="icon icon-x"></em>
+            </button>
+        </div>
+    </header>
+
+    <section class="body--assets">
+        <div id="filter-box" class="filter" ng-class="{'open': assetvm.isLeftSidebarOpen}">
+
+            <!-- FILTER SIDEBAR UI-VIEW -->
+            <div ui-view="filter"></div>
+
+        </div>
+        <div class="body-assets">
+
+            <section class="assets">
+                <div class="layered-nav">
+                    <div class="select-all left form-item">
+                        <input id="select-all" class="checkbox"
+                            name="select-all"
+                            type="checkbox"
+                            ng-checked="assetvm.allSelected"
+                            ng-click="assetvm.toggleSelectAll()">
+                        <label for="select-all" class="checkbox-label">Select All</label>
+                    </div>
+                    <div class="options left">
+                        Order By:
+                        <select id="catname"
+                            ng-model="assetvm.orderBy"
+                            ng-options="o.value as o.name for o in assetvm.orderByOptions"
+                            ng-change="assetvm.changeOrderBy(assetvm.orderBy)"></select>
+                    </div>
+                    <div class="count left">
+                        Pg:
+                        <select id="filter-count"
+                            ng-model="assetvm.perPage"
+                            ng-options="p for p in assetvm.perPageOptions"
+                            ng-change="assetvm.changePageSize(assetvm.perPage)"></select>
+                    </div>
+                    <div class="count left">
+                        Pub Status:
+                        <select id="status-filter"
+                            ng-model="assetvm.pubStatusFilter"
+                            ng-options="o.value as o.name for o in assetvm.statusFilterOptions"
+                            ng-change="assetvm.changePubStatusFilter(assetvm.pubStatusFilter)"></select>
+                    </div>
+                    <div class="toggle-view left">
+                        <button id="list-view"
+                            class="action icon icon-list"
+                            ng-class="{'active': assetvm.displayPageAs === 'list'}"
+                            ng-click="assetvm.setDisplayPageAs('list')"></button>
+                        <button  id="grid-view"
+                            class="action icon icon-thumbnails"
+                            ng-class="{'active': assetvm.displayPageAs === 'grid'}"
+                            ng-click="assetvm.setDisplayPageAs('grid')"></button>
+                    </div>
+
+                    <div class="left">{{assetvm.totalAssets}} Results</div>
+                    <!-- LIST VIEW PAGI -->
+                    <div class="pagi right" ng-if="assetvm.displayPageAs === 'list'">
+                        <dir-pagination-controls
+                            pagination-id="pagiAssetsList"
+                            boundary-links="true"
+                            on-page-change="assetvm.callApi()"></dir-pagination-controls>
+                    </div>
+                    <!-- GRID VIEW PAGI -->
+                    <div class="pagi right" ng-if="assetvm.displayPageAs === 'grid'">
+                        <dir-pagination-controls
+                            pagination-id="pagiAssetsGrid"
+                            boundary-links="true"
+                            on-page-change="assetvm.callApi()"></dir-pagination-controls>
+                    </div>
+                    <div class="page-num right">
+                        <span>Page {{assetvm.currentPage}} of {{assetvm.totalPages}}</span>
+                        <input ng-hide="assetvm.totalPages <= 1" min="1" value="1" type="number" ng-model="assetvm.currentPage"></div>
+                </div>
+
+                <!-- BEGIN LIST VIEW -->
+                <div class="list" data-view="list" ng-if="assetvm.displayPageAs === 'list'">
+                    <table class="table">
+                        <thead>
+                            <th>#</th>
+                            <th>Select</th>
+                            <th>Thumbnail</th>
+                            <th>Asset ID</th>
+                            <th>Asset Name</th>
+                            <th>Publish Status</th>
+                            <th>Is Published</th>
+                            <th>Score - Temp</th>
+                            <th>Last Modified</th>
+                        </thead>
+                        <tbody>
+                            <tr dir-paginate="asset in assetvm.assets |
+                                orderBy: assetvm.orderBy |
+                                itemsPerPage: assetvm.getPageSize()"
+                                current-page="assetvm.currentPage"
+                                total-items="assetvm.totalAssets"
+                                pagination-id="pagiAssetsList"
+                                ng-class="{'selected':asset.selected}"
+                                ui-sref="app.content.asset.detail({assetId: asset._id})">
+                                <td>{{$index + 1}}</td>
+                                <td class="form-item" ng-click="$event.stopPropagation()">
+                                    <input
+                                        class="checkbox"
+                                        id="checkbox_{{asset._id}}"
+                                        type="checkbox"
+                                        ng-model="asset.selected"
+                                        ng-checked="asset.selected"
+                                        ng-click="$event.stopPropagation()"
+                                        ng-change="assetvm.toggleSelectOne(asset)">
+                                    <label for="checkbox_{{asset._id}}" class="checkbox-label"></label>
+                                </td>
+                                <td class="image">
+                                    <div class="img-container">
+                                        <img ng-src="{{asset.bestThumbnail}}"></div>
+                                </td>
+                                <td>{{::asset._id | limitTo: -10}}</td>
+                                <td>{{::asset.name}}</td>
+                                <td>{{::asset.status}}</td>
+                                <td>{{::asset.isPublished}}</td>
+                                <td>{{::asset.score}}</td>
+                                <td>{{::asset.lastModified | date}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- END LIST VIEW -->
+
+                <!-- BEGIN GRID -->
+                <div class="grid" data-view="grid" ng-if="assetvm.displayPageAs === 'grid'">
+                    <article class="item"
+                        dir-paginate="asset in assetvm.assets |
+                        orderBy: assetvm.orderBy |
+                        itemsPerPage: assetvm.getPageSize()"
+                        pagination-id="pagiAssetsGrid"
+                        current-page="assetvm.currentPage"
+                        total-items="assetvm.totalAssets"
+                        ng-class="{'selected':asset.selected}"
+                        ui-sref="app.content.asset.detail({assetId: asset._id})">
+                        <div class="padding">
+                            <div class="select form-item" ng-click="$event.stopPropagation()">
+                                <input class="checkbox"
+                                  id="checkbox_{{asset._id}}"
+                                  type="checkbox"
+                                  ng-model="asset.selected"
+                                  ng-checked="asset.selected"
+                                  ng-change="assetvm.toggleSelectOne(asset)">
+                                <label for="checkbox_{{asset._id}}" class="checkbox-label"></label>
+                            </div>
+                            <div class="img-container">
+                                <img ng-show="asset.bestThumbnail"
+                                  ng-src="{{asset.bestThumbnail}}"
+                                  alt="thumbnail"></div>
+                            <div class="attr">
+                                <h3>{{::asset.name}}</h3>
+                                <p>{{::asset.name}}</p>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- END GRID --> </section>
+        </div>
+        <div id="user-sidebar"
+            class="sidebar-assets"
+            ng-class="{'open': assetvm.isRightSidebarOpen}">
+
+            <!-- TOOL SIDEBAR UI-VIEW -->
+            <div ui-view="toolsidebar"></div>
+
+        </div>
+    </section>
+
+</article>
+<!-- MAIN CONTENT END -->
